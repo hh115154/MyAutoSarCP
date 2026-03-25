@@ -1,0 +1,9 @@
+build/
+build_*/
+coverage_report/
+*.gcda
+*.gcno
+*.gcov
+*.o
+*.a
+.DS_Store
