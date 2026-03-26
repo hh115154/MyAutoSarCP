@@ -25,6 +25,15 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+/* ----------------------------------------------------------------
+ * 监控服务 socket（全局，Init 中创建，DeInit 中关闭）
+ * ---------------------------------------------------------------- */
+static int s_monitor_sock = -1;
 
 /* ----------------------------------------------------------------
  * 内部常量
@@ -36,6 +45,9 @@
 /** AP(SOC)侧监听端口（Provider 发往这里） */
 #define AP_REMOTE_EVT_PORT   30501u
 #define AP_REMOTE_SD_PORT    30490u
+
+/** 监控服务(HMI)专用端口 — CP 额外复制一份到此，不干扰 AP 接收 */
+#define MONITOR_REMOTE_EVT_PORT  30502u
 
 #define SOAD_GROUP_EVT  SOAD_SOCONGROUP_VEHICLE_SVC
 #define SOAD_GROUP_SD   SOAD_SOCONGROUP_SD
@@ -146,6 +158,13 @@ void SomeIpProvider_Init(void)
     send_offer_service();
     s_sdSent = 1u;
 
+    /* 创建监控服务专用 UDP socket（发往 127.0.0.1:30502）*/
+    s_monitor_sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s_monitor_sock >= 0) {
+        printf("[SOMEIP_CP] Monitor mirror socket created → 127.0.0.1:%u\n",
+               MONITOR_REMOTE_EVT_PORT);
+    }
+
     printf("[SOMEIP_CP] VehicleSignalService Provider initialized\n");
     printf("[SOMEIP_CP] Publishing to 127.0.0.1:%u every 10ms\n", AP_REMOTE_EVT_PORT);
 }
@@ -198,6 +217,16 @@ void SomeIpProvider_MainFunction_10ms(void)
                                           buf,
                                           (uint16)(16u + sizeof(payload)));
     (void)ret;
+
+    /* 同时镜像发送一份到监控服务端口（30502），不影响 AP 接收 */
+    if (s_monitor_sock >= 0) {
+        struct sockaddr_in dst;
+        dst.sin_family      = AF_INET;
+        dst.sin_port        = htons(MONITOR_REMOTE_EVT_PORT);
+        dst.sin_addr.s_addr = inet_addr("127.0.0.1");
+        sendto(s_monitor_sock, buf, 16u + sizeof(payload), 0,
+               (struct sockaddr*)&dst, sizeof(dst));
+    }
 }
 
 /* ================================================================
@@ -206,5 +235,9 @@ void SomeIpProvider_MainFunction_10ms(void)
 void SomeIpProvider_DeInit(void)
 {
     SoAd_DeInit();
+    if (s_monitor_sock >= 0) {
+        close(s_monitor_sock);
+        s_monitor_sock = -1;
+    }
     printf("[SOMEIP_CP] Provider deinitialized\n");
 }
