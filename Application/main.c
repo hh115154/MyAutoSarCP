@@ -20,6 +20,7 @@
 #include "Rte.h"
 #include "SwcEngine.h"
 #include "SwcBattery.h"
+#include "SomeIpProvider.h"  /* SOME/IP VehicleSignalService Provider */
 
 /* ================================================================
  * Host-build simulation: cycle counter
@@ -45,6 +46,9 @@ static void Task_Init(void)
     printf("[SWC  ] SwcBattery_Init\n");
     SwcBattery_Init();
 
+    printf("[SOMEIP] SomeIpProvider_Init\n");
+    SomeIpProvider_Init();
+
     printf("[EcuM ] Requesting RUN state (user=0)\n");
     EcuM_RequestRUN(0u);
 }
@@ -56,6 +60,7 @@ static void Task_10ms(void)
 {
     SwcEngine_MainFunction_10ms();
     SwcBattery_MainFunction_10ms();
+    SomeIpProvider_MainFunction_10ms();  /* 发布 VehicleSignalService Event */
 }
 
 /* ================================================================
@@ -77,7 +82,8 @@ int main(void)
 
     printf("==============================================\n");
     printf("  MyAutoSarCP  —  AUTOSAR CP R25-11\n");
-    printf("  ECU Startup Simulation (Host Build)\n");
+    printf("  ECU Startup + SOME/IP Provider Simulation\n");
+    printf("  VehicleSignalService → UDP 127.0.0.1:30501\n");
     printf("==============================================\n\n");
 
     /* ---- Phase-0: pre-OS init ---- */
@@ -119,6 +125,7 @@ int main(void)
 
     /* ---- Shutdown ---- */
     printf("\n[EcuM ] Shutdown requested\n");
+    SomeIpProvider_DeInit();
     Rte_Stop();
     EcuM_Shutdown();
     printf("[EcuM ] ECU off.\n");

@@ -45,6 +45,8 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/BSW/CommunicationServices/Com
     ${CMAKE_SOURCE_DIR}/BSW/CommunicationServices/PduR
     ${CMAKE_SOURCE_DIR}/BSW/CommunicationServices/CanIf
+    ${CMAKE_SOURCE_DIR}/BSW/CommunicationServices/SoAd
+    ${CMAKE_SOURCE_DIR}/BSW/CommunicationServices/SomeIp
     ${CMAKE_SOURCE_DIR}/BSW/MemoryServices/NvM
     ${CMAKE_SOURCE_DIR}/BSW/DiagnosticServices/Dcm
     ${CMAKE_SOURCE_DIR}/BSW/DiagnosticServices/Dem
@@ -66,6 +68,13 @@ add_library(rte STATIC RTE/Rte.c)
 # BSW stubs (host-build)
 add_library(bsw_ecum  STATIC BSW/SystemServices/EcuM/EcuM.c)
 add_library(bsw_dem   STATIC BSW/DiagnosticServices/Dem/Dem.c)
+add_library(bsw_det   STATIC BSW/SystemServices/Det/Det.c)
+
+# BSW Communication: SoAd + SOME/IP Provider
+add_library(bsw_soad  STATIC BSW/CommunicationServices/SoAd/SoAd.c)
+add_library(bsw_someip_provider STATIC
+    BSW/CommunicationServices/SomeIp/SomeIpProvider.c)
+target_link_libraries(bsw_someip_provider PRIVATE bsw_soad)
 
 # Application SWCs
 add_library(swc_engine  STATIC Application/SwcEngine/SwcEngine.c)
@@ -84,6 +93,9 @@ target_link_libraries(MyAutoSarCP
         rte
         bsw_ecum
         bsw_dem
+        bsw_det
+        bsw_soad
+        bsw_someip_provider
         swc_engine
         swc_battery
 )
