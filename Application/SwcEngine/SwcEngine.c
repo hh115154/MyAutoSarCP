@@ -4,6 +4,7 @@
  */
 #include "SwcEngine.h"
 #include <string.h>
+#include <stdio.h>
 
 /* ================================================================
  * Private Data
@@ -188,8 +189,23 @@ void SwcEngine_SetHmiInput(const SwcEngine_HmiInput_t* input)
         if (s_EngineData.state == ENGINE_STATE_OFF ||
             s_EngineData.state == ENGINE_STATE_INIT) {
             s_EngineData.state = ENGINE_STATE_RUNNING;
+            printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SwcEngine\","
+                   "\"event\":\"STATE_CHANGE\",\"state\":\"RUNNING\","
+                   "\"reason\":\"HMI_RPM_SET\",\"rpm\":%.0f}\n",
+                   input->hmi_rpm);
+            fflush(stdout);
         }
     }
+    printf("[MCU_LOG] {\"level\":\"DEBUG\",\"module\":\"SwcEngine\","
+           "\"event\":\"HMI_INPUT_SET\","
+           "\"valid\":%d,\"rpm\":%.0f,\"speed\":%.1f,"
+           "\"steer\":%.1f,\"brake\":%d,\"door\":%d,\"fuel\":%.1f}\n",
+           (int)input->hmi_valid,
+           input->hmi_rpm, input->hmi_speed_kmh,
+           input->hmi_steering_deg,
+           (int)input->hmi_brake, (int)input->hmi_door,
+           input->hmi_fuel_pct);
+    fflush(stdout);
 }
 
 const SwcEngine_HmiInput_t* SwcEngine_GetHmiInput(void)

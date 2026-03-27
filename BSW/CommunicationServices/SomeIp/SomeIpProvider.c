@@ -58,6 +58,7 @@ static int s_monitor_sock = -1;
 static uint16_t s_sessionId  = 1u;
 static uint8_t  s_e2eCounter = 0u;
 static uint8_t  s_sdSent     = 0u;
+static uint32_t s_txCount    = 0u;  /* 发送帧计数，用于日志节流 */
 
 /* ----------------------------------------------------------------
  * 内部：发送 SOME/IP SD OfferService
@@ -124,7 +125,10 @@ static void send_offer_service(void)
     memcpy(buf + 16u, sd_payload, sizeof(sd_payload));
 
     SoAd_IfTransmit(SOAD_GROUP_SD, buf, (uint16)(16u + sizeof(sd_payload)));
-    printf("[SOMEIP_CP] SD OfferService sent (Service=0x1001, Instance=0x01)\n");
+    printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SomeIpProvider\","
+           "\"event\":\"SD_OFFER_SENT\",\"svc_id\":\"0x1001\","
+           "\"instance\":\"0x01\",\"ttl\":3}\n");
+    fflush(stdout);
 }
 
 /* ================================================================
@@ -161,12 +165,20 @@ void SomeIpProvider_Init(void)
     /* 创建监控服务专用 UDP socket（发往 127.0.0.1:30502）*/
     s_monitor_sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (s_monitor_sock >= 0) {
-        printf("[SOMEIP_CP] Monitor mirror socket created → 127.0.0.1:%u\n",
+        printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SomeIpProvider\","
+               "\"event\":\"MONITOR_SOCK_READY\",\"mirror_port\":%u}\n",
                MONITOR_REMOTE_EVT_PORT);
+        fflush(stdout);
     }
 
-    printf("[SOMEIP_CP] VehicleSignalService Provider initialized\n");
-    printf("[SOMEIP_CP] Publishing to 127.0.0.1:%u every 10ms\n", AP_REMOTE_EVT_PORT);
+    printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SomeIpProvider\","
+           "\"event\":\"INIT_OK\",\"svc_id\":\"0x1001\","
+           "\"ap_port\":%u,\"period_ms\":10}\n",
+           AP_REMOTE_EVT_PORT);
+    printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SomeIpProvider\","
+           "\"event\":\"PUBLISHING\",\"dest\":\"127.0.0.1\",\"port\":%u}\n",
+           AP_REMOTE_EVT_PORT);
+    fflush(stdout);
 }
 
 /* ================================================================
@@ -238,6 +250,29 @@ void SomeIpProvider_MainFunction_10ms(void)
     Std_ReturnType ret = SoAd_IfTransmit(SOAD_GROUP_EVT,
                                           buf,
                                           (uint16)(16u + sizeof(payload)));
+    s_txCount++;
+
+    /* 每 100 帧（约 1s）输出一条结构化日志，避免刷屏 */
+    if (s_txCount % 100u == 1u) {
+        printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SomeIpProvider\","
+               "\"event\":\"TX_FRAME\","
+               "\"session\":%u,\"e2e_cnt\":%u,\"e2e_crc\":%u,"
+               "\"speed\":%.1f,\"rpm\":%.0f,\"steer\":%.1f,"
+               "\"brake\":%d,\"door\":%d,\"fuel\":%.1f,"
+               "\"hmi_valid\":%d,\"tx_total\":%u}\n",
+               (unsigned)(s_sessionId - 1u),
+               (unsigned)payload.e2e_counter,
+               (unsigned)payload.e2e_crc,
+               payload.vehicle_speed_kmh,
+               payload.engine_rpm,
+               payload.steering_angle_deg,
+               (int)payload.brake_pedal,
+               (int)payload.door_status,
+               payload.fuel_level_pct,
+               (int)hmi->hmi_valid,
+               (unsigned)s_txCount);
+        fflush(stdout);
+    }
     (void)ret;
 
     /* 同时镜像发送一份到监控服务端口（30502），不影响 AP 接收 */
@@ -261,5 +296,8 @@ void SomeIpProvider_DeInit(void)
         close(s_monitor_sock);
         s_monitor_sock = -1;
     }
-    printf("[SOMEIP_CP] Provider deinitialized\n");
+    printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SomeIpProvider\","
+           "\"event\":\"DEINIT\",\"tx_total\":%u}\n",
+           (unsigned)s_txCount);
+    fflush(stdout);
 }

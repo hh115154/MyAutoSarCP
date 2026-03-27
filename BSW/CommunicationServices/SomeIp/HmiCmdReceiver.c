@@ -76,7 +76,10 @@ static void* hmi_recv_thread(void* arg)
     (void)arg;
     char buf[BUF_SIZE];
 
-    printf("[HmiCmd] Listening on UDP 127.0.0.1:%u\n", (unsigned)HMI_CMD_PORT);
+    printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"HmiCmdReceiver\","
+           "\"event\":\"LISTEN_START\",\"port\":%u}\n",
+           (unsigned)HMI_CMD_PORT);
+    fflush(stdout);
 
     while (s_running) {
         struct sockaddr_in src;
@@ -103,9 +106,14 @@ static void* hmi_recv_thread(void* arg)
 
         SwcEngine_SetHmiInput(&input);
 
-        printf("[HmiCmd] RX: speed=%.1f rpm=%.0f steer=%.1f brake=%d door=%d fuel=%.1f%%\n",
+        /* 结构化日志：可被 monitor_server 解析的 JSON 格式 */
+        printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"HmiCmdReceiver\","
+               "\"event\":\"HMI_CMD_RX\","
+               "\"speed_kmh\":%.1f,\"rpm\":%.0f,\"steer\":%.1f,"
+               "\"brake\":%d,\"door\":%d,\"fuel\":%.1f}\n",
                input.hmi_speed_kmh, input.hmi_rpm, input.hmi_steering_deg,
                (int)input.hmi_brake, (int)input.hmi_door, input.hmi_fuel_pct);
+        fflush(stdout);
     }
 
     return NULL;
@@ -141,7 +149,10 @@ void HmiCmdReceiver_Init(void)
 
     s_running = 1;
     pthread_create(&s_thread, NULL, hmi_recv_thread, NULL);
-    printf("[HmiCmd] HMI command receiver started on UDP:%u\n", (unsigned)HMI_CMD_PORT);
+    printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"HmiCmdReceiver\","
+           "\"event\":\"INIT_OK\",\"port\":%u}\n",
+           (unsigned)HMI_CMD_PORT);
+    fflush(stdout);
 }
 
 void HmiCmdReceiver_DeInit(void)
@@ -152,5 +163,7 @@ void HmiCmdReceiver_DeInit(void)
         s_sock = -1;
     }
     pthread_join(s_thread, NULL);
-    printf("[HmiCmd] HMI command receiver stopped\n");
+    printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"HmiCmdReceiver\","
+           "\"event\":\"DEINIT\"}\n");
+    fflush(stdout);
 }
