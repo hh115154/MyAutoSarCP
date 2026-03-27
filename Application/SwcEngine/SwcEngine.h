@@ -51,4 +51,26 @@ Rte_StatusType SwcEngine_SetMode(uint8 requestedMode);
 /** @brief  Get current engine data (for testing / DID read) */
 const SwcEngine_DataType* SwcEngine_GetData(void);
 
+/* ================================================================
+ * HMI Input Interface — 由 HMI 下发的目标值（0 = 使用内部仿真）
+ * ================================================================ */
+
+/** @brief  HMI 下发的目标信号（车速/转速/转角）
+ *          值 < 0 表示未设定，使用内部仿真状态机 */
+typedef struct {
+    float32 hmi_speed_kmh;          /**< 目标车速 km/h  (-1 = 不覆盖) */
+    float32 hmi_rpm;                /**< 目标转速 RPM   (-1 = 不覆盖) */
+    float32 hmi_steering_deg;       /**< 目标转角 deg   (-1 = 不覆盖) */
+    uint8   hmi_brake;              /**< 制动踏板 0/1   (0xFF = 不覆盖) */
+    uint8   hmi_door;               /**< 车门状态 bitmask (0xFF = 不覆盖) */
+    float32 hmi_fuel_pct;           /**< 燃油液位 %     (-1 = 不覆盖) */
+    uint8   hmi_valid;              /**< 1=有效 HMI 输入，0=无 */
+} SwcEngine_HmiInput_t;
+
+/** @brief  由外部（HMI 命令接收模块）调用，设置 HMI 输入目标值 */
+void SwcEngine_SetHmiInput(const SwcEngine_HmiInput_t* input);
+
+/** @brief  获取当前 HMI 输入值（供 SomeIpProvider 打包使用） */
+const SwcEngine_HmiInput_t* SwcEngine_GetHmiInput(void);
+
 #endif /* SWC_ENGINE_H */

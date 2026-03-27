@@ -21,6 +21,7 @@
 #include "SwcEngine.h"
 #include "SwcBattery.h"
 #include "SomeIpProvider.h"  /* SOME/IP VehicleSignalService Provider */
+#include "HmiCmdReceiver.h"  /* HMI 下行指令接收（UDP:30503）*/
 
 /* ================================================================
  * Host-build simulation: cycle counter
@@ -48,6 +49,9 @@ static void Task_Init(void)
 
     printf("[SOMEIP] SomeIpProvider_Init\n");
     SomeIpProvider_Init();
+
+    printf("[HMI  ] HmiCmdReceiver_Init (UDP:30503)\n");
+    HmiCmdReceiver_Init();
 
     printf("[EcuM ] Requesting RUN state (user=0)\n");
     EcuM_RequestRUN(0u);
@@ -125,6 +129,7 @@ int main(void)
 
     /* ---- Shutdown ---- */
     printf("\n[EcuM ] Shutdown requested\n");
+    HmiCmdReceiver_DeInit();
     SomeIpProvider_DeInit();
     Rte_Stop();
     EcuM_Shutdown();

@@ -174,18 +174,40 @@ void SomeIpProvider_Init(void)
  * ================================================================ */
 void SomeIpProvider_MainFunction_10ms(void)
 {
-    const SwcEngine_DataType*  eng  = SwcEngine_GetData();
-    const SwcBattery_DataType* batt = SwcBattery_GetData();
+    const SwcEngine_DataType*    eng   = SwcEngine_GetData();
+    const SwcBattery_DataType*   batt  = SwcBattery_GetData();
+    const SwcEngine_HmiInput_t*  hmi   = SwcEngine_GetHmiInput();
 
     /* ---- 填充 Payload ---- */
     VehicleSignalPayload_t payload;
     memset(&payload, 0, sizeof(payload));
-    payload.vehicle_speed_kmh   = eng->speedRpm * 0.05f;   /* 粗略换算 */
-    payload.engine_rpm          = eng->speedRpm;
-    payload.brake_pedal         = (eng->state == ENGINE_STATE_STOPPING) ? 1u : 0u;
-    payload.steering_angle_deg  = 0.0f;                    /* 暂无转向 SWC */
-    payload.door_status         = 0x00u;                   /* 暂无门控 SWC */
-    payload.fuel_level_pct      = batt->voltage * 6.25f;   /* 模拟燃油 */
+
+    /* 优先使用 HMI 输入，否则用内部仿真值 */
+    payload.vehicle_speed_kmh  = (hmi->hmi_valid && hmi->hmi_speed_kmh >= 0.0f)
+                                 ? hmi->hmi_speed_kmh
+                                 : eng->speedRpm * 0.05f;
+
+    payload.engine_rpm         = (hmi->hmi_valid && hmi->hmi_rpm >= 0.0f)
+                                 ? hmi->hmi_rpm
+                                 : eng->speedRpm;
+
+    payload.brake_pedal        = (hmi->hmi_valid && hmi->hmi_brake != 0xFFu)
+                                 ? hmi->hmi_brake
+                                 : (eng->state == ENGINE_STATE_STOPPING) ? 1u : 0u;
+
+    payload.steering_angle_deg = (hmi->hmi_valid && hmi->hmi_steering_deg >= -360.0f
+                                  && hmi->hmi_steering_deg != -1.0f)
+                                 ? hmi->hmi_steering_deg
+                                 : 0.0f;
+
+    payload.door_status        = (hmi->hmi_valid && hmi->hmi_door != 0xFFu)
+                                 ? hmi->hmi_door
+                                 : 0x00u;
+
+    payload.fuel_level_pct     = (hmi->hmi_valid && hmi->hmi_fuel_pct >= 0.0f)
+                                 ? hmi->hmi_fuel_pct
+                                 : batt->voltage * 6.25f;
+
     payload.e2e_counter         = s_e2eCounter++;
 
     /* E2E CRC8（不含 crc 字节本身） */

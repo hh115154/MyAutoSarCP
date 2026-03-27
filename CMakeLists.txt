@@ -70,11 +70,16 @@ add_library(bsw_ecum  STATIC BSW/SystemServices/EcuM/EcuM.c)
 add_library(bsw_dem   STATIC BSW/DiagnosticServices/Dem/Dem.c)
 add_library(bsw_det   STATIC BSW/SystemServices/Det/Det.c)
 
-# BSW Communication: SoAd + SOME/IP Provider
+# BSW Communication: SoAd + SOME/IP Provider + HMI Cmd Receiver
 add_library(bsw_soad  STATIC BSW/CommunicationServices/SoAd/SoAd.c)
 add_library(bsw_someip_provider STATIC
     BSW/CommunicationServices/SomeIp/SomeIpProvider.c)
 target_link_libraries(bsw_someip_provider PRIVATE bsw_soad)
+
+add_library(bsw_hmi_cmd STATIC
+    BSW/CommunicationServices/SomeIp/HmiCmdReceiver.c)
+# bsw_hmi_cmd 包含 SwcEngine.h，include 路径由全局 include_directories 覆盖
+# 链接时 swc_engine 提供符号，放在 executable 的 target_link_libraries 里即可
 
 # Application SWCs
 add_library(swc_engine  STATIC Application/SwcEngine/SwcEngine.c)
@@ -96,8 +101,10 @@ target_link_libraries(MyAutoSarCP
         bsw_det
         bsw_soad
         bsw_someip_provider
+        bsw_hmi_cmd
         swc_engine
         swc_battery
+        pthread
 )
 
 # ==============================================================
