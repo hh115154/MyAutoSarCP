@@ -252,7 +252,31 @@ void SomeIpProvider_MainFunction_10ms(void)
                                           (uint16)(16u + sizeof(payload)));
     s_txCount++;
 
-    /* 每 100 帧（约 1s）输出一条结构化日志，避免刷屏 */
+    /* 每 10 帧（约 100ms）输出一条发布日志，清晰记录每次 SOME/IP 信号发布 */
+    if (s_txCount % 10u == 1u) {
+        printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SomeIpProvider\","
+               "\"event\":\"SOMEIP_TX_PUBLISH\","
+               "\"dest\":\"127.0.0.1:30501\",\"proto\":\"SOME/IP\","
+               "\"svc_id\":\"0x1001\",\"evt_id\":\"0x8001\","
+               "\"session\":%u,\"e2e_cnt\":%u,\"e2e_crc\":%u,"
+               "\"speed\":%.2f,\"rpm\":%.1f,\"steer\":%.2f,"
+               "\"brake\":%d,\"door\":%d,\"fuel\":%.2f,"
+               "\"hmi_valid\":%d,\"tx_total\":%u}\n",
+               (unsigned)(s_sessionId - 1u),
+               (unsigned)payload.e2e_counter,
+               (unsigned)payload.e2e_crc,
+               payload.vehicle_speed_kmh,
+               payload.engine_rpm,
+               payload.steering_angle_deg,
+               (int)payload.brake_pedal,
+               (int)payload.door_status,
+               payload.fuel_level_pct,
+               (int)hmi->hmi_valid,
+               (unsigned)s_txCount);
+        fflush(stdout);
+    }
+
+    /* 每 100 帧（约 1s）额外输出一条统计摘要（保留原有 TX_FRAME）*/
     if (s_txCount % 100u == 1u) {
         printf("[MCU_LOG] {\"level\":\"INFO\",\"module\":\"SomeIpProvider\","
                "\"event\":\"TX_FRAME\","
