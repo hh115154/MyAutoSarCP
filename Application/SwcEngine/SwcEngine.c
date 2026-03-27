@@ -64,7 +64,10 @@ static void Engine_UpdateStateMachine(void)
             if (s_SimulatedTemp < 90.0f) {
                 s_SimulatedTemp += 0.5f;
             }
-            s_SimulatedSpeed = 800.0f + (float32)(s_EngineData.runTimeSeconds % 200u);
+            /* HMI 有效输入时不覆盖转速，保持 HMI 设定值 */
+            if (!s_HmiInput.hmi_valid || s_HmiInput.hmi_rpm < 0.0f) {
+                s_SimulatedSpeed = 800.0f + (float32)(s_EngineData.runTimeSeconds % 200u);
+            }
 
             /* Fault: overtemperature > 120 °C */
             if (s_EngineData.tempCelsius > 120.0f) {

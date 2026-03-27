@@ -195,8 +195,8 @@ void SomeIpProvider_MainFunction_10ms(void)
                                  ? hmi->hmi_brake
                                  : (eng->state == ENGINE_STATE_STOPPING) ? 1u : 0u;
 
-    payload.steering_angle_deg = (hmi->hmi_valid && hmi->hmi_steering_deg >= -360.0f
-                                  && hmi->hmi_steering_deg != -1.0f)
+    /* 转角 HMI 覆盖：哨兵值 -1.0f 表示不设定，其他值（含负值）直接使用 */
+    payload.steering_angle_deg = (hmi->hmi_valid && hmi->hmi_steering_deg != -1.0f)
                                  ? hmi->hmi_steering_deg
                                  : 0.0f;
 
